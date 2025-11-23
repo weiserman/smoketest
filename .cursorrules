@@ -212,6 +212,35 @@ Unless otherwise specified:
   **Do not hardcode** hostnames or ports.
 - Pass all SAP/Neptune-specific parameters via **query string** as defined in the OpenAPI spec.
 
+### 8.3 Example Web Service Call
+
+Here is a practical example of making a Neptune API call using Axios:
+
+```js
+const fetchEquipment = async () => {
+  try {
+    const response = await axios.get(
+      "https://dxp24.co.za:8081/proxy/http%3A%2F%2Fvhcalabaci.saportals.com%3A50700%2Fneptune%2Fapi%2Fequipment%2FSearch%3Fsap-client%3D800%26IV_PARAMS%3D%7B%7D%26IV_SORTBY%3D%7B%7D%26IS_PAGING%3D%7B%22TAKE%22%3A2553%2C%22CURRENTPAGE%22%3A1%2C%22SKIP%22%3A0%2C%22BOTTOM%22%3A2553%2C%22TOTALPAGES%22%3A1%2C%22TOTALRECORDS%22%3A2553%2C%22SERVER_PAGINATION%22%3Afalse%7D%26IV_SERVER_PAGINATION%3Dtrue/baf7b7e4-d0a6-4467-af19-d00249e1b3af"
+    );
+    equipment.value = response.data;
+  } catch (err) {
+    error.value = "Failed to load equipment data. Please try again later.";
+  } finally {
+    loading.value = false;
+  }
+};
+```
+
+**Key points from this example:**
+
+1. **Error Handling**: Always use `try/catch/finally` blocks to handle errors gracefully.
+2. **Loading States**: Manage loading state in the `finally` block to ensure it's always reset.
+3. **Error Messages**: Provide user-friendly error messages without exposing technical details.
+4. **Reactive Values**: Use Vue reactive refs (`.value`) to update component state.
+5. **URL Structure**: The example shows a proxy pattern where the Neptune API URL is encoded in the proxy path.
+
+**Note**: In production code, extract the base URL and query parameters into configuration variables rather than hardcoding them in the URL string.
+
 ---
 
 ## 9. Common Query Parameters
