@@ -62,8 +62,6 @@ Neptune hosts SPA bundles under a **webapp folder**, not the domain root.
 /webapp/<NEPTUNE-WEBAPP-GUID>/
 ```
 
-````
-
 - The GUID is assigned when the webapp is created in Neptune.
   **Do NOT hardcode a random GUID**; either use the real one or clearly mark a TODO.
 
@@ -534,4 +532,3 @@ After generating or modifying code that interacts with Neptune APIs, the AI must
 
 5. Ensure loading, error, and empty states are handled in the UI.
 6. Ensure code adheres to the **Vue 3 Composition API** and **TypeScript** standards described above.
-````
