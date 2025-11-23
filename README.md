@@ -10,47 +10,79 @@ A basic Vue 3 application configured for deployment testing to Neptune Open Edit
 - ✅ Asset loading tests (images, CSS)
 - ✅ Build verification tools
 
-## Setup
+## Testing Instructions
 
-1. Install dependencies:
+Follow these steps to test the application deployment to Neptune:
+
+### Step 1: Install Dependencies
+
+First, install all required npm packages:
+
 ```bash
 npm install
 ```
 
-2. Update the base path in `vite.config.js`:
-   - Change `/webapp/my-webapp/` to match your Neptune Web App name
-   - For example, if your Neptune Web App is named "my-app", use `/webapp/my-app/`
+### Step 2: Configure Base Path
 
-## Development
+Before building, update the base path in `vite.config.js` to match your Neptune Web App name:
 
-Run the development server:
-```bash
-npm run dev
-```
+- Open `vite.config.js`
+- Change `/webapp/my-webapp/` to match your actual Neptune Web App name
+- For example, if your Neptune Web App is named "my-app", use `/webapp/my-app/`
 
-## Build
+**Important:** The base path in `vite.config.js` must exactly match the Web App name in Neptune.
 
-Build for production:
+### Step 3: Build the Application
+
+Build the application for production:
+
 ```bash
 npm run build
 ```
 
-The build output will be in the `dist/` folder, which Neptune expects.
+This will create a `dist/` folder containing all the production-ready files.
 
-## Deployment to Neptune
+### Step 4: Deploy to Neptune Web App
 
-1. Build the application: `npm run build`
-2. Upload the contents of the `dist/` folder to your Neptune Web App
-3. Ensure the Web App name in Neptune matches the base path in `vite.config.js`
+1. **Locate the build output:**
+   - The build creates a `dist/` folder in the project root
+   - This folder contains:
+     - `index.html` (main HTML file)
+     - `assets/` folder (containing CSS and JavaScript files)
 
-## Testing Asset Loading
+2. **Upload to Neptune:**
+   - Open your Neptune Web App in the Neptune administration interface
+   - Upload the **contents** of the `dist/` folder (not the folder itself)
+   - Ensure all files from `dist/` are uploaded to the root of your Web App
 
-The app includes a test component (`AssetTest.vue`) that verifies:
-- Image assets load correctly
-- CSS assets load correctly
-- Base path is configured properly
+3. **Verify deployment:**
+   - Access your Neptune Web App URL
+   - The application should load and display the "Neptune Deployment Test" interface
+   - Click the "Run Tests" button to verify:
+     - ✅ Image assets load correctly
+     - ✅ CSS assets load correctly
+     - ✅ Base path is configured properly
 
-After deployment, click the "Run Tests" button to verify all assets are loading correctly.
+## Development
+
+For local development and testing:
+
+```bash
+npm run dev
+```
+
+This starts a local development server (typically at `http://localhost:5173`).
+
+**Note:** The dev server uses a different base path (`/`) than production. The production build uses the Neptune-compatible base path configured in `vite.config.js`.
+
+## Build Output
+
+After running `npm run build`, the `dist/` folder will contain:
+
+- `index.html` - Main HTML entry point
+- `assets/` - Compiled CSS and JavaScript files with content hashing for cache busting
+
+All asset paths are automatically adjusted to work with the configured base path.
 
 ## Project Structure
 
