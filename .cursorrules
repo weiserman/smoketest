@@ -1,0 +1,537 @@
+# Cursor Standard Rules
+
+These rules define how Cursor should create, refactor, and maintain this codebase.  
+They apply to **ALL files and ALL changes** unless overridden by a more specific rules file
+(e.g. `.cursor/neptune-rules.md`).
+
+## 1. Project Overview
+
+- This repository is a **Vue 3** application running inside **Neptune Software** (including Neptune Open Edition).
+- The frontend uses **Vite** as the build tool and is deployed as a **Neptune Web App**.
+- Backend APIs are standardized **Neptune REST endpoints generated from SAP**  
+  (e.g. `/neptune/api/equipment`).  
+  The _Equipment_ OpenAPI spec is the **reference pattern** for all similar APIs.
+- Use modern **Vue 3 Composition API** and **TypeScript** where practical.
+
+---
+
+## 2. General Principles
+
+1. Produce **clean, modular, readable** code.
+2. Maintain **consistency** throughout the codebase.
+3. Keep generated code **deterministic and reproducible**.
+4. Avoid **unnecessary dependencies** or complexity.
+5. Always handle **loading**, **error**, and **empty** states when calling APIs.
+
+---
+
+## 3. Tech Stack & Project Structure
+
+### 3.1 Defaults
+
+1. Use **Vue 3** with the **Composition API**.
+2. Use **Vite** as the build tool.
+3. Ensure all new files follow **ES module** standards (`import` / `export`).
+
+### 3.2 Directory Layout
+
+Organize files under the standard structure:
+
+- `src/api/`
+- `src/components/`
+- `src/views/`
+- `src/types/`
+- `src/composables/`
+- `src/utils/`
+
+When creating new files, follow existing naming and folder structures; **do not invent new top-level directories** unless explicitly requested.
+
+---
+
+## 4. REQUIRED Vite Configuration for Neptune Open Edition
+
+Neptune hosts SPA bundles under a **webapp folder**, not the domain root.
+
+### 4.1 General Requirements
+
+- The project **must** use a JavaScript Vite config file named **`vite.config.js`** at the repo root.
+- Always use the **Vue plugin** (`@vitejs/plugin-vue`).
+- The `base` URL must match the **Neptune Web App path**, with the form:
+
+```txt
+/webapp/<NEPTUNE-WEBAPP-GUID>/
+```
+
+````
+
+- The GUID is assigned when the webapp is created in Neptune.
+  **Do NOT hardcode a random GUID**; either use the real one or clearly mark a TODO.
+
+### 4.2 Example `vite.config.js`
+
+```js
+import { defineConfig } from "vite";
+import vue from "@vitejs/plugin-vue";
+
+export default defineConfig({
+  base: "/webapp/<REPLACE-WITH-NEPTUNE-WEBAPP-GUID>/", // MUST match the Neptune Web App path
+  build: {
+    outDir: "dist", // Neptune expects build output here
+  },
+  plugins: [vue()],
+});
+```
+
+### 4.3 Modification Rules
+
+When the model updates Vite configuration, it **must preserve**:
+
+- `base`
+- `build.outDir = "dist"`
+- Vue plugin registration via `@vitejs/plugin-vue`.
+
+---
+
+## 5. Vue 3 Composition API Standards
+
+1. Use `<script setup>` syntax for all new components.
+2. Use **TypeScript** interfaces/types for component props and emits.
+3. Prefer **composables** for reusable logic (place in `src/composables/`).
+4. Use `ref()` for primitive values and `reactive()` for objects
+   (prefer `ref` when possible).
+5. Always define proper types for props using `defineProps<T>()` or `withDefaults()`.
+6. Use `defineEmits<T>()` for typed event definitions.
+
+### 5.1 Example Component
+
+```vue
+<script setup lang="ts">
+import { ref } from "vue";
+
+interface Props {
+  title: string;
+  count?: number;
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  count: 0,
+});
+
+const emit = defineEmits<{
+  update: [value: number];
+}>();
+
+const localState = ref<string>("");
+</script>
+
+<template>
+  <div>
+    <h1>{{ props.title }}</h1>
+    <!-- component content -->
+  </div>
+</template>
+```
+
+---
+
+## 6. Code Style & Naming Conventions
+
+1. Use **PascalCase** for component names and Vue single-file components
+   (e.g. `UserProfile.vue`).
+2. Use **camelCase** for variables, functions, and composables.
+3. Use **UPPER_SNAKE_CASE** for constants.
+4. Use **kebab-case** for non-component file names where appropriate.
+   Follow standard Vue conventions already present in the repo.
+5. Always use **explicit imports** (avoid `import *`).
+6. Group imports in this order:
+
+   1. Vue imports
+   2. Third-party libraries
+   3. Local imports
+
+---
+
+## 7. Additional Guidelines
+
+1. **Error Handling**
+
+   - Always handle errors in async operations.
+   - Provide useful feedback to the user without exposing sensitive details.
+
+2. **Type Safety**
+
+   - Avoid `any`; use `unknown` when the type is truly unknown.
+   - Prefer strongly typed interfaces and types in `src/types/`.
+
+3. **Performance**
+
+   - Use `v-memo` and `v-once` when appropriate for expensive subtrees.
+
+4. **Accessibility**
+
+   - Use semantic HTML and proper ARIA attributes where needed.
+
+5. **Testing**
+
+   - Write unit tests for composables and complex components when tests exist in the project.
+
+---
+
+## 8. Neptune API – General Pattern
+
+All backend APIs are **Neptune endpoints** following the Equipment OpenAPI pattern.
+When implementing endpoints always consider using paging as systems may have large number of records.
+
+### 8.1 Base URL & Operations
+
+- Base URL pattern:
+
+```txt
+NEPTUNE_API_BASE/<entity>
+```
+
+Examples:
+
+- `/neptune/api/equipment`
+
+- `/neptune/api/<other-entity>`
+
+- Each entity exposes the same operations:
+
+  - `GET    /MetaData`
+  - `GET    /Search`
+  - `GET    /Read`
+  - `POST   /Create`
+  - `PUT    /Update`
+  - `DELETE /Delete`
+
+### 8.2 API Client Rules
+
+Unless otherwise specified:
+
+- Use **Axios** (or the existing HTTP client).
+- Accept a **base URL from configuration** (env, config file).
+  **Do not hardcode** hostnames or ports.
+- Pass all SAP/Neptune-specific parameters via **query string** as defined in the OpenAPI spec.
+
+---
+
+## 9. Common Query Parameters
+
+Most operations use some or all of:
+
+- `sap-client` (required)
+
+  - Type: `string` (e.g. `"800"`)
+
+- `$select` (optional)
+
+  - Type: `string`
+  - Comma-separated list of field names to return.
+
+- `IV_PARAMS`
+
+  - Type: **stringified JSON object**
+  - Used for filters or key values.
+
+- `IV_SORTBY`
+
+  - Type: **stringified JSON array**
+  - Describes sorting.
+
+- `IS_PAGING`
+
+  - Type: **stringified JSON object**
+  - Describes pagination.
+
+- `IV_VALUE`
+
+  - Type: `string`
+  - Extra scalar value (for `/Read`).
+
+### 9.1 Serialization Requirements
+
+When generating code that calls these APIs, always:
+
+- Use `JSON.stringify` for:
+
+  - `IV_PARAMS`
+  - `IV_SORTBY`
+  - `IS_PAGING`
+
+- Keep parameter names **exactly** as specified (case-sensitive, including dashes and underscores).
+- Include `sap-client` in **all** calls, either from config or a helper.
+
+---
+
+## 10. Neptune Pagination (`/Search`)
+
+The `/Search` endpoint implements **server-side pagination** via `IS_PAGING` on the request and `MS_PAGING` in the response.
+
+### 10.1 Request Shape
+
+`/Search` behaves like this for any entity:
+
+- Method: `GET`
+- Query params:
+
+  - `sap-client`: string (required)
+  - `IV_PARAMS`: JSON string of filters
+    (fields depend on the entity, e.g. `EQUIPMENT`, `DESCRIPTION`).
+  - `IV_SORTBY`: JSON string of sort instructions.
+  - `IS_PAGING`: JSON string of paging instructions.
+
+The `IS_PAGING` object:
+
+```ts
+type PagingRequest = {
+  TAKE: number; // page size
+  CURRENTPAGE: number; // 1-based page index
+  SKIP: number; // number of records to skip
+  BOTTOM?: number; // usually 0 from the client
+  TOTALPAGES?: number; // server fills this in
+  TOTALRECORDS?: number; // server fills this in
+  SERVER_PAGINATION: boolean; // true to enable server-side paging
+};
+```
+
+### 10.2 Client Pagination Rules
+
+When implementing pagination on the client:
+
+- Derive `SKIP` as:
+
+```ts
+SKIP = (currentPage - 1) * pageSize;
+```
+
+- Set `TAKE` to the selected `pageSize` (e.g. 20, 50, 100).
+- Use **1-based** page numbering for `CURRENTPAGE`.
+- Set `BOTTOM`, `TOTALPAGES`, `TOTALRECORDS` to `0` or omit them in the request; the server will populate them.
+- Always set `SERVER_PAGINATION = true` when relying on backend pagination.
+
+### 10.3 Example `/Search` Call (TypeScript)
+
+```ts
+const pageSize = 50;
+const page = currentPage; // 1-based
+
+const paging: PagingRequest = {
+  TAKE: pageSize,
+  CURRENTPAGE: page,
+  SKIP: (page - 1) * pageSize,
+  BOTTOM: 0,
+  TOTALPAGES: 0,
+  TOTALRECORDS: 0,
+  SERVER_PAGINATION: true,
+};
+
+const params = {
+  "sap-client": "800",
+  IV_PARAMS: JSON.stringify(filters), // e.g. { EQUIPMENT: "123", DESCRIPTION: "PUMP" }
+  IV_SORTBY: JSON.stringify(sortBy), // e.g. [ { FIELD: "EQUIPMENT", DIRECTION: "ASC" } ]
+  IS_PAGING: JSON.stringify(paging),
+};
+
+const response = await axios.get<SearchResponse>(`${baseUrl}/Search`, {
+  params,
+});
+```
+
+### 10.4 Response Shape
+
+```ts
+type SearchResponse = {
+  result: {
+    MS_PAGING: {
+      TAKE: number;
+      CURRENTPAGE: number;
+      SKIP: number;
+      BOTTOM: number;
+      TOTALPAGES: number;
+      TOTALRECORDS: number;
+      SERVER_PAGINATION: boolean;
+    };
+    MT_<ENTITY>: Array<Record<string, any>>; // e.g. MT_EQUIPMENT
+    MT_MESSAGES?: any[];
+    MV_ERROR?: boolean;
+  };
+};
+```
+
+After a `/Search` call:
+
+- Use `result.MS_PAGING.TOTALRECORDS` and `TOTALPAGES` to update UI pagination controls.
+- Render list items from `result.MT_<ENTITY>`.
+- If `MV_ERROR` is `true` or `MT_MESSAGES` contains error messages, surface these to the user.
+
+---
+
+## 11. READ, CREATE, UPDATE, DELETE Patterns
+
+### 11.1 READ (`/Read`)
+
+- Method: `GET`
+- Query params:
+
+  - `sap-client` (required)
+  - `$select` (optional)
+  - `IV_PARAMS` (JSON string, “Import Parameters as a JSON Object”)
+  - `IV_VALUE` (string)
+
+- Response:
+
+  - `result.MS_<ENTITY>` with the full record.
+  - `result.MT_MESSAGES` and `result.MV_ERROR` for messages/errors.
+
+### 11.2 CREATE (`/Create`)
+
+- Method: `POST`
+- Query params:
+
+  - `sap-client`
+  - `$select` (optional)
+
+- Body:
+
+  - JSON object: `{ MS_<ENTITY>: { ...fields... } }`
+
+- Response:
+
+  - `result.MS_<ENTITY>` with the created record.
+  - `result.MT_MESSAGES` and `result.MV_ERROR`.
+
+### 11.3 UPDATE (`/Update`)
+
+- Method: `PUT`
+- Query params:
+
+  - `sap-client`
+  - `IV_PARAMS` (JSON string, “Value”; includes primary key and updated fields)
+
+- **No** `requestBody` is defined in the spec; all update data is sent via `IV_PARAMS`.
+- Response:
+
+  - `result.MS_<ENTITY>`
+  - `result.MT_MESSAGES`
+  - `result.MV_ERROR`
+
+### 11.4 DELETE (`/Delete`)
+
+- Method: `DELETE`
+- Query params:
+
+  - `sap-client`
+  - `IV_PARAMS` (JSON string with key fields)
+
+- Response:
+
+  - Uses `deleteDeleteResponse`; check for errors via `MV_ERROR` and `MT_MESSAGES` if returned.
+
+### 11.5 Entity Naming
+
+- Respect the **UPPER_SNAKE_CASE** field names defined in the OpenAPI spec when interacting with the backend.
+- If the frontend uses camelCase:
+
+  - Implement a clear mapping layer between frontend models and backend DTOs.
+
+---
+
+## 12. Metadata Usage (`/MetaData`)
+
+- The `/MetaData` endpoint returns metadata about fields for a given entity.
+
+### 12.1 Response Structure
+
+- `result.MT_METADATA` – array of field metadata entries.
+- `result.MT_MESSAGES`, `result.MV_ERROR`.
+
+### 12.2 Usage Guidelines
+
+When building dynamic forms or grids, use `/MetaData` as the source of:
+
+- Field labels
+- Maximum lengths
+- Data types
+- Allowed values (if provided)
+
+---
+
+## 13. Error Handling Rules for Neptune APIs
+
+For all Neptune API calls:
+
+1. **Transport-Level Errors**
+
+   - If HTTP status is **not 2xx**, treat it as a transport error.
+   - Show a generic error message plus any `errorResponse` details (`ERROR_CODE`, `ERROR_TEXT`).
+
+2. **Application-Level Errors (200 OK)**
+
+   - Check `result.MV_ERROR`; if `true`, treat as a business error.
+   - Inspect `result.MT_MESSAGES`; if it contains messages of type `E` (error), display them.
+
+3. **Logging**
+
+   - Log enough context (endpoint, parameters, correlation IDs if available) when reporting errors.
+   - Do **not** log sensitive data.
+
+---
+
+## 14. Applying This Pattern to Other APIs
+
+- The **Equipment** OpenAPI spec is the canonical example.
+  Other entities exposed by Neptune will follow the **same patterns**:
+
+  - Same function names:
+
+    - `/MetaData`, `/Search`, `/Read`, `/Create`, `/Update`, `/Delete`.
+
+  - Same query parameter conventions:
+
+    - `sap-client`, `$select`, `IV_PARAMS`, `IV_SORTBY`, `IS_PAGING`, `IV_VALUE`.
+
+  - Same pagination structure:
+
+    - `IS_PAGING` on request, `MS_PAGING` on response.
+
+  - Same result wrapper:
+
+    - `result.MS_<ENTITY>` and/or `result.MT_<ENTITY>`,
+    - `result.MT_MESSAGES`,
+    - `result.MV_ERROR`.
+
+### 14.1 Adding Support for a New Entity
+
+When adding support for a new entity:
+
+- Reuse the same client pattern as for Equipment.
+- Only change:
+
+  - Entity base path (e.g. `/neptune/api/<entity>`).
+  - Dataset names in the response (`MT_<ENTITY>`, `MS_<ENTITY>`).
+  - The available fields and their types.
+
+---
+
+## 15. Verification Checklist for Generated Code
+
+After generating or modifying code that interacts with Neptune APIs, the AI must:
+
+1. Check that **`sap-client`** is included where required.
+2. Check that **`IV_PARAMS`**, **`IV_SORTBY`**, and **`IS_PAGING`** are stringified with `JSON.stringify`.
+3. Check that the expected properties are referenced correctly:
+
+   - `result.MS_PAGING`
+   - `result.MT_<ENTITY>`
+   - `result.MS_<ENTITY>`
+
+4. Check that **Vite config** preserves:
+
+   - `base`
+   - `build.outDir = "dist"`
+   - Vue plugin setup via `@vitejs/plugin-vue`.
+
+5. Ensure loading, error, and empty states are handled in the UI.
+6. Ensure code adheres to the **Vue 3 Composition API** and **TypeScript** standards described above.
+````
