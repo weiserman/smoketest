@@ -65,14 +65,49 @@ Neptune hosts SPA bundles under a **webapp folder**, not the domain root.
 - The GUID is assigned when the webapp is created in Neptune.
   **Do NOT hardcode a random GUID**; either use the real one or clearly mark a TODO.
 
-### 4.2 Example `vite.config.js`
+### 4.2 Configuration Management
+
+**Use environment variables** to manage Neptune server and web app configuration. This allows different settings for development, staging, and production without hardcoding values.
+
+#### 4.2.1 Environment Variables
+
+Create a `.env` file in the project root with the following variables:
+
+```env
+# Neptune Web App Name (used in vite.config.js base path)
+VITE_NEPTUNE_WEBAPP_NAME=smoketest
+
+# Neptune Server Configuration
+VITE_NEPTUNE_SERVER_URL=https://dxp24.co.za:8081
+
+# Neptune API Base Path
+VITE_NEPTUNE_API_BASE=/neptune/api
+
+# SAP Client
+VITE_SAP_CLIENT=800
+
+# Proxy Configuration
+VITE_USE_PROXY=true
+VITE_PROXY_BASE=/proxy
+```
+
+**Important:**
+
+- All Vite environment variables must be prefixed with `VITE_` to be accessible in the application
+- Add `.env` to `.gitignore` to avoid committing sensitive configuration
+- Create a `.env.example` file as a template (without actual values)
+
+#### 4.2.2 Example `vite.config.js` with Environment Variables
 
 ```js
 import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
 
+// Load environment variables
+const webappName = process.env.VITE_NEPTUNE_WEBAPP_NAME || "smoketest";
+
 export default defineConfig({
-  base: "/webapp/<REPLACE-WITH-NEPTUNE-WEBAPP-GUID>/", // MUST match the Neptune Web App path
+  base: `/webapp/${webappName}/`, // MUST match the Neptune Web App path
   build: {
     outDir: "dist", // Neptune expects build output here
   },
@@ -212,9 +247,46 @@ Unless otherwise specified:
   **Do not hardcode** hostnames or ports.
 - Pass all SAP/Neptune-specific parameters via **query string** as defined in the OpenAPI spec.
 
-### 8.3 Example Web Service Call
+### 8.3 Configuration Utility
 
-Here is a practical example of making a Neptune API call using Axios:
+Use the centralized configuration utility (`src/config/neptune.js`) to manage Neptune API URLs and parameters. This avoids hardcoding server names and makes it easy to switch between environments.
+
+#### 8.3.1 Using the Configuration Utility
+
+```js
+import { getNeptuneApiUrl, buildNeptuneQueryParams } from "@/config/neptune";
+import axios from "axios";
+
+const fetchEquipment = async () => {
+  try {
+    // Build the API URL using the configuration utility
+    const url = getNeptuneApiUrl("equipment", "Search");
+
+    // Build query parameters with automatic JSON stringification
+    const params = buildNeptuneQueryParams({
+      IV_PARAMS: {},
+      IV_SORTBY: [],
+      IS_PAGING: {
+        TAKE: 50,
+        CURRENTPAGE: 1,
+        SKIP: 0,
+        SERVER_PAGINATION: true,
+      },
+    });
+
+    const response = await axios.get(url, { params });
+    equipment.value = response.data;
+  } catch (err) {
+    error.value = "Failed to load equipment data. Please try again later.";
+  } finally {
+    loading.value = false;
+  }
+};
+```
+
+#### 8.3.2 Legacy Example (Direct URL - Not Recommended)
+
+If you need to use a direct URL (not recommended for production), here is the pattern:
 
 ```js
 const fetchEquipment = async () => {
@@ -231,15 +303,14 @@ const fetchEquipment = async () => {
 };
 ```
 
-**Key points from this example:**
+**Key points:**
 
-1. **Error Handling**: Always use `try/catch/finally` blocks to handle errors gracefully.
-2. **Loading States**: Manage loading state in the `finally` block to ensure it's always reset.
-3. **Error Messages**: Provide user-friendly error messages without exposing technical details.
-4. **Reactive Values**: Use Vue reactive refs (`.value`) to update component state.
-5. **URL Structure**: The example shows a proxy pattern where the Neptune API URL is encoded in the proxy path.
-
-**Note**: In production code, extract the base URL and query parameters into configuration variables rather than hardcoding them in the URL string.
+1. **Use Configuration Utility**: Always use `getNeptuneApiUrl()` and `buildNeptuneQueryParams()` from `src/config/neptune.js` instead of hardcoding URLs.
+2. **Error Handling**: Always use `try/catch/finally` blocks to handle errors gracefully.
+3. **Loading States**: Manage loading state in the `finally` block to ensure it's always reset.
+4. **Error Messages**: Provide user-friendly error messages without exposing technical details.
+5. **Reactive Values**: Use Vue reactive refs (`.value`) to update component state.
+6. **Environment Variables**: Server URLs and configuration should come from `.env` files, not hardcoded values.
 
 ---
 
