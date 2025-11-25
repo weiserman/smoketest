@@ -14,28 +14,23 @@ Create a `.env` file in the project root with the following variables:
 
 ```env
 # Neptune Web App Name (used in vite.config.js base path)
-# This should match the Web App name in Neptune (e.g., "smoketest", "my-app")
-VITE_NEPTUNE_WEBAPP_NAME=smoketest
+# This should match the Web App "Name" in Neptune (e.g., "equipment")
+VITE_NEPTUNE_WEBAPP_NAME=equipment
 
-# Neptune Server Configuration
-# The base URL of your Neptune Open Edition server
-# Examples:
-#   - https://dxp24.co.za:8081 (with proxy)
-#   - http://vhcalabaci.saportals.com:50700 (direct)
-VITE_NEPTUNE_SERVER_URL=https://dxp24.co.za:8081
+# Neptune Open Edition Server (public host that exposes /proxy)
+# e.g. https://dxp24.perdeby.com
+VITE_NEPTUNE_SERVER_URL=https://dxp24.perdeby.com
 
-# Neptune API Base Path (usually /neptune/api)
-VITE_NEPTUNE_API_BASE=/neptune/api
+# SAP/Neptune backend origin (encoded inside /proxy/)
+# e.g. http://vhcalabaci.saportals.com:50700
+VITE_NEPTUNE_BACKEND_URL=http://vhcalabaci.saportals.com:50700
+
+# Neptune Web App GUID / API ID (suffix appended to proxy URLs)
+VITE_NEPTUNE_API_ID=baf7b7e4-d0a6-4467-af19-d00249e1b3af
+# (Optional legacy: VITE_NEPTUNE_GUID)
 
 # SAP Client (e.g., "800")
 VITE_SAP_CLIENT=800
-
-# Proxy Configuration (if using a proxy)
-# Set to "true" if your Neptune server requires a proxy
-VITE_USE_PROXY=true
-
-# Proxy Base Path (if using proxy, e.g., "/proxy")
-VITE_PROXY_BASE=/proxy
 ```
 
 ### 2. Update for Your Environment
@@ -43,9 +38,9 @@ VITE_PROXY_BASE=/proxy
 Replace the values with your actual Neptune server configuration:
 
 - **VITE_NEPTUNE_WEBAPP_NAME**: The name of your Web App in Neptune (must match exactly)
-- **VITE_NEPTUNE_SERVER_URL**: Your Neptune server URL (with or without protocol depending on proxy setup)
+- **VITE_NEPTUNE_SERVER_URL**: The Neptune Open Edition server that hosts `/proxy`
+- **VITE_NEPTUNE_BACKEND_URL**: The SAP/Neptune backend origin that actually serves `/neptune/api`
 - **VITE_SAP_CLIENT**: Your SAP client number
-- **VITE_USE_PROXY**: Set to `"true"` if using a proxy, `"false"` otherwise
 
 ## How It Works
 
@@ -54,28 +49,27 @@ Replace the values with your actual Neptune server configuration:
 The `vite.config.js` file reads `VITE_NEPTUNE_WEBAPP_NAME` to set the base path:
 
 ```js
-const webappName = process.env.VITE_NEPTUNE_WEBAPP_NAME || "smoketest";
-base: `/webapp/${webappName}/`
+const webappName = process.env.VITE_NEPTUNE_WEBAPP_NAME || "equipment";
+base: `/webapp/${webappName}/`;
 ```
 
 ### API Configuration
 
 The `src/config/neptune.js` file provides utility functions that use environment variables:
 
-- `getNeptuneApiBaseUrl()` - Builds the complete API base URL
 - `getNeptuneApiUrl(entity, operation)` - Builds endpoint URLs
 - `buildNeptuneQueryParams(params)` - Formats query parameters
+- `buildNeptuneApiRequest(entity, operation, params)` - Returns `{ url, params }` ready for Axios (proxy-aware)
 
 ### Example Usage
 
 ```js
-import { getNeptuneApiUrl, buildNeptuneQueryParams } from "@/config/neptune";
+import { buildNeptuneApiRequest } from "@/config/neptune";
 import axios from "axios";
 
 const fetchEquipment = async () => {
   try {
-    const url = getNeptuneApiUrl("equipment", "Search");
-    const params = buildNeptuneQueryParams({
+    const request = buildNeptuneApiRequest("equipment", "Search", {
       IV_PARAMS: {},
       IV_SORTBY: [],
       IS_PAGING: {
@@ -86,7 +80,10 @@ const fetchEquipment = async () => {
       },
     });
 
-    const response = await axios.get(url, { params });
+    const response = await axios.get(
+      request.url,
+      request.params ? { params: request.params } : undefined
+    );
     return response.data;
   } catch (err) {
     console.error("Failed to load equipment:", err);
@@ -108,4 +105,3 @@ const fetchEquipment = async () => {
 - The `.env` file should be added to `.gitignore` (already configured)
 - Create a `.env.example` file as a template for other developers
 - Restart the dev server after changing `.env` values
-
