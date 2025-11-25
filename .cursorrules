@@ -71,24 +71,24 @@ Neptune hosts SPA bundles under a **webapp folder**, not the domain root.
 
 #### 4.2.1 Environment Variables
 
-Create a `.env` file in the project root with the following variables:
+Create a `.env` file in the project root with the following variables (values shown are the current defaults and should be updated per deployment as needed):
 
 ```env
-# Neptune Web App Name (used in vite.config.js base path)
-VITE_NEPTUNE_WEBAPP_NAME=smoketest
+# Neptune Web App Name (used for Vite base path)
+VITE_NEPTUNE_WEBAPP_NAME=equipment
 
-# Neptune Server Configuration
-VITE_NEPTUNE_SERVER_URL=https://dxp24.co.za:8081
+# Neptune Open Edition server (public host)
+VITE_NEPTUNE_SERVER_URL=https://dxp24.perdeby.com
 
-# Neptune API Base Path
-VITE_NEPTUNE_API_BASE=/neptune/api
+# SAP/Neptune backend origin (encoded inside /proxy/)
+VITE_NEPTUNE_BACKEND_URL=http://vhcalabaci.saportals.com:50700
+
+# Neptune Web App GUID / API ID (suffix for proxy URL)
+VITE_NEPTUNE_API_ID=baf7b7e4-d0a6-4467-af19-d00249e1b3af
+# (Legacy name `VITE_NEPTUNE_GUID` is still read if provided)
 
 # SAP Client
 VITE_SAP_CLIENT=800
-
-# Proxy Configuration
-VITE_USE_PROXY=true
-VITE_PROXY_BASE=/proxy
 ```
 
 **Important:**
@@ -104,7 +104,7 @@ import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
 
 // Load environment variables
-const webappName = process.env.VITE_NEPTUNE_WEBAPP_NAME || "smoketest";
+const webappName = process.env.VITE_NEPTUNE_WEBAPP_NAME || "equipment";
 
 export default defineConfig({
   base: `/webapp/${webappName}/`, // MUST match the Neptune Web App path
@@ -254,16 +254,12 @@ Use the centralized configuration utility (`src/config/neptune.js`) to manage Ne
 #### 8.3.1 Using the Configuration Utility
 
 ```js
-import { getNeptuneApiUrl, buildNeptuneQueryParams } from "@/config/neptune";
+import { buildNeptuneApiRequest } from "@/config/neptune";
 import axios from "axios";
 
 const fetchEquipment = async () => {
   try {
-    // Build the API URL using the configuration utility
-    const url = getNeptuneApiUrl("equipment", "Search");
-
-    // Build query parameters with automatic JSON stringification
-    const params = buildNeptuneQueryParams({
+    const request = buildNeptuneApiRequest("equipment", "Search", {
       IV_PARAMS: {},
       IV_SORTBY: [],
       IS_PAGING: {
@@ -274,7 +270,10 @@ const fetchEquipment = async () => {
       },
     });
 
-    const response = await axios.get(url, { params });
+    const response = await axios.get(
+      request.url,
+      request.params ? { params: request.params } : undefined
+    );
     equipment.value = response.data;
   } catch (err) {
     error.value = "Failed to load equipment data. Please try again later.";
