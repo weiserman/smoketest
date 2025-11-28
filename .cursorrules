@@ -78,10 +78,10 @@ Create a `.env` file in the project root with the following variables (values sh
 VITE_NEPTUNE_WEBAPP_NAME=equipment
 
 # Neptune Open Edition server (public host)
-VITE_NEPTUNE_SERVER_URL=https://dxp24.perdeby.com
+VITE_NEPTUNE_SERVER_URL=https://neptunetest.com:8081
 
 # SAP/Neptune backend origin (encoded inside /proxy/)
-VITE_NEPTUNE_BACKEND_URL=http://vhcalabaci.saportals.com:50700
+VITE_NEPTUNE_BACKEND_URL=http://sapsystemurl.com:50700
 
 # Neptune Web App GUID / API ID (suffix for proxy URL)
 VITE_NEPTUNE_API_ID=baf7b7e4-d0a6-4467-af19-d00249e1b3af
